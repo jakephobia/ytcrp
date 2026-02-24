@@ -2,7 +2,7 @@
 
 Tool web: incolla un link YouTube, scarica il video ritagliato in formato portrait 9:16 con zoom regolabile (0–30%).
 
-- **Tecnologie:** Flask, pytubefix, ffmpeg
+- **Tecnologie:** Flask, yt-dlp, ffmpeg
 - **Deploy:** Docker (es. Render) — vedi sotto
 
 ## Deploy su Render
@@ -16,7 +16,7 @@ Tool web: incolla un link YouTube, scarica il video ritagliato in formato portra
 
 ```bash
 pip install -r requirements.txt
-# Serve ffmpeg installato e in PATH
+# Serve ffmpeg e yt-dlp (pip da requirements) in PATH
 python app.py
 ```
 

@@ -1,6 +1,6 @@
 """
 Backend per il tool HTML: scarica video da YouTube e ritaglia in portrait 9:16.
-Download con pytubefix (nessun ffmpeg per lo scaricamento). Ritaglio con ffmpeg se disponibile.
+Download con yt-dlp (evita bot detection). Ritaglio con ffmpeg se disponibile.
 Progress reale via job: POST restituisce job_id, polling su GET /api/status/<id>, download su GET /api/result/<id>.
 """
 
@@ -13,11 +13,6 @@ import uuid
 from pathlib import Path
 
 from flask import Flask, request, send_file, jsonify, send_from_directory
-
-try:
-    from pytubefix import YouTube
-except ImportError:
-    YouTube = None
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 
@@ -44,38 +39,61 @@ def ffmpeg_available() -> bool:
         return False
 
 
+def _ytdlp_cmd() -> list[str]:
+    """Comando per invocare yt-dlp (binario o modulo Python)."""
+    for cmd in (["yt-dlp"], [os.environ.get("PYTHON", "python"), "-m", "yt_dlp"]):
+        try:
+            subprocess.run(cmd + ["--version"], capture_output=True, timeout=5)
+            return cmd
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+    return []
+
+
 def download_youtube(
     url: str,
     out_dir: str,
     out_basename: str,
     progress_callback: None = None,
 ) -> tuple[bool, str | None]:
-    """Scarica solo video con pytubefix. progress_callback(0..50) opzionale per avanzamento reale."""
-    if YouTube is None:
-        return (False, "Libreria pytubefix non installata. Esegui: pip install pytubefix")
+    """Scarica solo video con yt-dlp (evita bot detection). progress_callback(0..50) opzionale."""
+    ytdlp = _ytdlp_cmd()
+    if not ytdlp:
+        return (False, "yt-dlp non disponibile. Esegui: pip install yt-dlp")
+    out_tpl = os.path.join(out_dir, out_basename + ".%(ext)s")
     try:
-        def on_progress(stream, chunk, bytes_remaining):
-            if progress_callback and getattr(stream, "filesize", None):
-                total = stream.filesize
-                if total and total > 0:
-                    pct = (1 - bytes_remaining / total) * 50.0  # 0..50
-                    progress_callback(min(50.0, max(0.0, pct)))
-
-        # Client WEB + po_token per ridurre il blocco "bot detection" da YouTube
-        yt = YouTube(url, "WEB", on_progress_callback=on_progress, use_po_token=True)
-        streams = yt.streams.filter(only_video=True).order_by("resolution").desc()
-        stream = streams.first()
-        if stream is None:
-            streams = yt.streams.filter(progressive=True).order_by("resolution").desc()
-            stream = streams.first()
-        if stream is None:
-            return (False, "Nessuno stream video disponibile per questo link.")
-        path = stream.download(output_path=out_dir, filename=out_basename)
-        if not path or not Path(path).exists() or Path(path).stat().st_size == 0:
+        if progress_callback:
+            progress_callback(5.0)
+        cmd = ytdlp + [
+            "--no-warnings",
+            "--no-playlist",
+            "-f", "bestvideo[ext=mp4]/bestvideo/best[ext=mp4]/best",
+            "--merge-output-format", "mp4",
+            "-o", out_tpl,
+            url,
+        ]
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            timeout=600,
+            text=True,
+            cwd=out_dir,
+        )
+        if progress_callback:
+            progress_callback(50.0)
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "").strip() or "Download fallito"
+            if "bot" in err.lower() or "blocked" in err.lower() or "403" in err:
+                err = "YouTube ha bloccato la richiesta. Riprova più tardi o usa un altro video."
+            return (False, err[:500])
+        path = get_downloaded_path(out_dir, out_basename)
+        if not path or not Path(path).stat().st_size:
             return (False, "File scaricato vuoto.")
         return (True, None)
+    except subprocess.TimeoutExpired:
+        return (False, "Timeout: video troppo lungo o connessione lenta.")
     except Exception as e:
-        return (False, str(e))
+        return (False, str(e)[:500])
 
 
 def get_downloaded_path(base_dir: str, base_name: str) -> str | None:
