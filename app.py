@@ -61,7 +61,8 @@ def download_youtube(
                     pct = (1 - bytes_remaining / total) * 50.0  # 0..50
                     progress_callback(min(50.0, max(0.0, pct)))
 
-        yt = YouTube(url, on_progress_callback=on_progress)
+        # Client WEB + po_token per ridurre il blocco "bot detection" da YouTube
+        yt = YouTube(url, "WEB", on_progress_callback=on_progress, use_po_token=True)
         streams = yt.streams.filter(only_video=True).order_by("resolution").desc()
         stream = streams.first()
         if stream is None:
