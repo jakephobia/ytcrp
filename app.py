@@ -64,28 +64,36 @@ def download_youtube(
     try:
         if progress_callback:
             progress_callback(5.0)
-        cmd = ytdlp + [
-            "--no-warnings",
-            "--no-playlist",
-            "-f", "bestvideo[ext=mp4]/bestvideo/best[ext=mp4]/best",
-            "--merge-output-format", "mp4",
-            "-o", out_tpl,
-            url,
-        ]
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            timeout=600,
-            text=True,
-            cwd=out_dir,
-        )
-        if progress_callback:
-            progress_callback(50.0)
+        # Client che non richiedono PO token: tv_simply, poi android_vr come fallback
+        for client in ("tv_simply", "android_vr"):
+            cmd = ytdlp + [
+                "--no-warnings",
+                "--no-playlist",
+                "--extractor-args", f"youtube:player_client={client}",
+                "-f", "bestvideo[ext=mp4]/bestvideo/best[ext=mp4]/best",
+                "--merge-output-format", "mp4",
+                "-o", out_tpl,
+                "-w", "2",
+                url,
+            ]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                timeout=600,
+                text=True,
+                cwd=out_dir,
+            )
+            if progress_callback:
+                progress_callback(50.0)
+            if result.returncode == 0:
+                break
+            err = (result.stderr or result.stdout or "").strip()
+            if "bot" in err.lower() or "blocked" in err.lower() or "403" in err or "Sign in" in err:
+                continue  # prova il prossimo client
+            return (False, err[:500] or "Download fallito")
         if result.returncode != 0:
             err = (result.stderr or result.stdout or "").strip() or "Download fallito"
-            if "bot" in err.lower() or "blocked" in err.lower() or "403" in err:
-                err = "YouTube ha bloccato la richiesta. Riprova più tardi o usa un altro video."
-            return (False, err[:500])
+            return (False, "YouTube ha bloccato la richiesta. Riprova più tardi o usa un altro video.")
         path = get_downloaded_path(out_dir, out_basename)
         if not path or not Path(path).stat().st_size:
             return (False, "File scaricato vuoto.")
