@@ -1,0 +1,364 @@
+/* ===== Variabili ===== */
+:root {
+  --bg-body: linear-gradient(145deg, #1a1b26 0%, #16161e 100%);
+  --bg-card: #24283b;
+  --bg-input: #1e2030;
+  --border: #414868;
+  --text: #c0caf5;
+  --text-muted: #565f89;
+  --text-label: #a9b1d6;
+  --accent: #7aa2f7;
+  --accent-hover: #89b4fa;
+  --loading: #e0af68;
+  --error: #f7768e;
+  --success: #9ece6a;
+  --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-btn: 10px;
+  --touch-min: 44px;
+  --input-pad: 0.7rem 0.9rem;
+  --section-gap: 1rem;
+  --preview-w: 320px;
+  --preview-h: calc(var(--preview-w) * 16 / 9);
+  --panel-min-h: calc(var(--preview-h) + 1.5rem);
+}
+
+/* ===== Base ===== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-body);
+  color: var(--text);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  gap: 1.25rem;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Card sinistra (form + zoom + anteprima) ===== */
+.card {
+  width: 100%;
+  max-width: 400px;
+  min-height: var(--panel-min-h);
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.5rem;
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.card h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.card .sub {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Label unificati */
+.card label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-label);
+  margin-bottom: 0.35rem;
+}
+
+/* Input unificati (url e number) */
+.card input[type="url"],
+.card input[type="number"] {
+  width: 100%;
+  padding: var(--input-pad);
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card input[type="number"] {
+  width: 4rem;
+  padding: 0.5rem 0.5rem;
+  text-align: center;
+}
+
+.card input[type="url"] {
+  margin-bottom: var(--section-gap);
+}
+
+.card input[type="url"]::placeholder {
+  color: var(--text-muted);
+}
+
+.card input[type="url"]:focus,
+.card input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.2);
+}
+
+/* Sezioni e separatore */
+.card-section {
+  margin-bottom: 0;
+}
+
+.card-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.card-separator {
+  width: 100%;
+  margin: 1rem 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+}
+
+/* Pulsanti unificati (stessa altezza e radius) */
+.card-section .primary,
+.card-section .secondary {
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.05s;
+}
+
+.card-section .primary {
+  color: #1a1b26;
+  background: var(--accent);
+}
+
+.card-section .primary:hover {
+  background: var(--accent-hover);
+}
+
+.card-section .primary:active {
+  transform: scale(0.98);
+}
+
+.card-section .primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.card-section .secondary {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.card-section .secondary:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.card-section .secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.zoom-group {
+  margin-bottom: 0.75rem;
+}
+
+.zoom-group label {
+  margin-bottom: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.zoom-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.card .progress-wrap {
+  margin-top: 0.6rem;
+  height: 6px;
+  background: var(--bg-input);
+  border-radius: 3px;
+  overflow: hidden;
+  display: none;
+}
+
+.card .progress-wrap.visible {
+  display: block;
+}
+
+.card .progress-bar {
+  height: 100%;
+  width: 0%;
+  max-width: 100%;
+  background: linear-gradient(90deg, var(--accent), #bb9af7);
+  border-radius: 3px;
+  transition: width 0.25s ease-out;
+}
+
+.card .status {
+  margin-top: 0.6rem;
+  min-height: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--text-label);
+}
+
+.card .status.loading {
+  color: var(--loading);
+}
+
+.card .status.error {
+  color: var(--error);
+}
+
+.card .status.success {
+  color: var(--success);
+}
+
+/* ===== Box destra: solo immagine anteprima ===== */
+.preview-box {
+  flex-shrink: 0;
+  min-height: var(--panel-min-h);
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-wrap {
+  width: var(--preview-w);
+  aspect-ratio: 9 / 16;
+  background: var(--bg-input);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.preview-placeholder {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 0.75rem;
+  line-height: 1.35;
+}
+
+/* ===== Responsive: tablet ===== */
+@media (max-width: 768px) {
+  body {
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .card {
+    max-width: 100%;
+    width: 100%;
+    min-height: unset;
+  }
+
+  .preview-box {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    justify-content: center;
+    min-height: unset;
+  }
+
+  .preview-wrap {
+    width: 100%;
+    max-width: 280px;
+    height: auto;
+    min-height: 200px;
+  }
+}
+
+/* ===== Responsive: cellulari ===== */
+@media (max-width: 480px) {
+  body {
+    padding: 0.75rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0));
+    padding-left: calc(0.75rem + env(safe-area-inset-left, 0));
+    padding-right: calc(0.75rem + env(safe-area-inset-right, 0));
+    gap: 0.75rem;
+  }
+
+  .card {
+    padding: 1rem 1rem;
+    border-radius: 12px;
+  }
+
+  .card h1 {
+    font-size: 1.2rem;
+  }
+
+  .card .sub {
+    font-size: 0.8rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .card input[type="url"] {
+    padding: 0.6rem 0.8rem;
+    font-size: 16px;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-section .primary,
+  .card-section .secondary {
+    padding: 0.65rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .preview-box {
+    padding: 0.6rem;
+    border-radius: 12px;
+  }
+
+  .preview-wrap {
+    max-width: 240px;
+    min-height: 160px;
+  }
+
+  .preview-placeholder {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+  }
+}

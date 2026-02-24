@@ -1,0 +1,11 @@
+# Ignora file non necessari nell'immagine Docker
+.git
+.gitignore
+__pycache__
+*.pyc
+.venv
+venv
+env
+*.md
+.env
+.DS_Store

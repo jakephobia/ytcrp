@@ -1,0 +1,6 @@
+# Render: servizio web da questo repo (Docker)
+services:
+  - type: web
+    name: youtube-portrait
+    runtime: docker
+    plan: free
