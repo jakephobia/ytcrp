@@ -1,0 +1,12 @@
+# Fly.io: bot Telegram (sempre attivo, nessuna porta HTTP)
+# Crea l'app con: fly launch --no-deploy
+# Imposta il token: fly secrets set TELEGRAM_BOT_TOKEN=il_tuo_token
+# Deploy: fly deploy
+
+app = "yt-portrait-bot"
+
+[build]
+  dockerfile = "Dockerfile.bot"
+
+# Il bot fa solo polling, non serve esporre una porta
+# [http_service] non definito = processo worker

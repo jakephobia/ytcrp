@@ -8,4 +8,5 @@ venv
 env
 *.md
 .env
+token.txt
 .DS_Store
