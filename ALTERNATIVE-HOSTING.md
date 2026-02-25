@@ -42,6 +42,8 @@ Niente SSH, niente VM: colleghi GitHub e aggiungi il token. Tempo: ~5 minuti.
 
 **Costo:** Railway dà circa **5 $ di credito gratis al mese**. Un bot che risponde e fa qualche download al giorno di solito resta dentro il free tier; oltre si paga a consumo (pochi centesimi).
 
+**Se il bot si blocca su "Ritaglio e invio in corso":** su Railway il container ha poca RAM. Prova con **video brevi** (es. sotto 2–3 minuti). Se serve, nella dashboard del servizio aumenta la **memoria** (Settings → Resources). Controlla i **log** (Deployments → View logs) per vedere se c’è timeout o errore ffmpeg.
+
 ---
 
 ## Opzione 2: Fly.io (da terminale)

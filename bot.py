@@ -38,6 +38,9 @@ logger = logging.getLogger(__name__)
 # Limite Telegram per invio video (circa 50 MB)
 TELEGRAM_VIDEO_MAX_BYTES = 49 * 1024 * 1024
 
+# Timeout ritaglio (secondi): su hosting con poche risorse evita blocchi infiniti
+CROP_TIMEOUT = 300
+
 
 def get_zoom_keyboard():
     """Tastiera inline per scegliere lo zoom (0, 7, 15, 30%)."""
@@ -211,31 +214,53 @@ async def callback_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await context.bot.send_message(chat_id, "⏳ Ritaglio e invio in corso…")
     portrait_path = os.path.join(preview_tmpdir, "portrait.mp4")
     loop = asyncio.get_event_loop()
-    ok = await loop.run_in_executor(
-        None,
-        lambda: crop_to_portrait(input_path, portrait_path, zoom_pct=zoom_pct),
-    )
+    try:
+        logger.info("Avvio ritaglio portrait per %s", portrait_path)
+        ok = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: crop_to_portrait(input_path, portrait_path, zoom_pct=zoom_pct),
+            ),
+            timeout=CROP_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("Timeout ritaglio dopo %s secondi", CROP_TIMEOUT)
+        await context.bot.send_message(
+            chat_id,
+            "⏳ Ritaglio troppo lungo (timeout). Prova con un video più corto o riprova più tardi.",
+        )
+        _clear_preview_data(context)
+        return
     if not ok or not os.path.isfile(portrait_path):
         await context.bot.send_message(chat_id, "❌ Errore durante il ritaglio.")
         _clear_preview_data(context)
         return
     size = os.path.getsize(portrait_path)
-    if size <= TELEGRAM_VIDEO_MAX_BYTES:
-        with open(portrait_path, "rb") as f:
-            await context.bot.send_video(
-                chat_id=chat_id,
-                video=f,
-                filename="video_portrait.mp4",
-                caption="Portrait 9:16",
-            )
-    else:
-        with open(portrait_path, "rb") as f:
-            await context.bot.send_document(
-                chat_id=chat_id,
-                document=f,
-                filename="video_portrait.mp4",
-                caption="Video >50MB inviato come documento.",
-            )
+    logger.info("Ritaglio completato, invio file %.1f MB", size / (1024 * 1024))
+    try:
+        if size <= TELEGRAM_VIDEO_MAX_BYTES:
+            with open(portrait_path, "rb") as f:
+                await context.bot.send_video(
+                    chat_id=chat_id,
+                    video=f,
+                    filename="video_portrait.mp4",
+                    caption="Portrait 9:16",
+                )
+        else:
+            with open(portrait_path, "rb") as f:
+                await context.bot.send_document(
+                    chat_id=chat_id,
+                    document=f,
+                    filename="video_portrait.mp4",
+                    caption="Video >50MB inviato come documento.",
+                )
+        logger.info("Video inviato con successo")
+    except Exception as e:
+        logger.exception("Errore invio video a Telegram")
+        await context.bot.send_message(
+            chat_id,
+            f"❌ Errore durante l'invio del file. Riprova. ({type(e).__name__})",
+        )
     try:
         await query.message.delete()
     except Exception:

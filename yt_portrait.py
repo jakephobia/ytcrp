@@ -129,8 +129,9 @@ def _zoom_filter(zoom_pct: float) -> str:
 
 def crop_to_portrait(input_path: str, output_path: str, zoom_pct: float = 7) -> bool:
     crop_filter = _zoom_filter(zoom_pct)
+    # -threads 2 riduce uso RAM/CPU su hosting con risorse limitate (es. Railway)
     cmd = [
-        "ffmpeg", "-y", "-i", input_path,
+        "ffmpeg", "-y", "-threads", "2", "-i", input_path,
         "-vf", crop_filter, "-an", "-movflags", "+faststart",
         output_path,
     ]
