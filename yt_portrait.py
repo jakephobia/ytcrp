@@ -3,10 +3,12 @@ Logica condivisa: download YouTube con yt-dlp e ritaglio portrait 9:16 con zoom.
 Usato da app Flask e dal bot Telegram.
 """
 
+import json
 import os
 import re
 import subprocess
 import tempfile
+import urllib.request
 from pathlib import Path
 
 ZOOM_PCT_MAX = 30
@@ -32,6 +34,30 @@ def _ytdlp_cmd() -> list[str]:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             continue
     return []
+
+
+def _fetch_free_proxy_it() -> str | None:
+    """Recupera un proxy HTTP italiano da una lista gratuita (Free Proxy DB). Instabile: può essere lento o non funzionare."""
+    try:
+        req = urllib.request.Request(
+            "https://freeproxydb.com/api/proxy/search?country=IT&protocol=http&page_size=5",
+            headers={"User-Agent": "yt-portrait-bot/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        items = data.get("data") or []
+        for p in items:
+            if not p.get("is_valid", 1):
+                continue
+            cs = (p.get("connect_string") or "").strip()
+            if cs and (cs.startswith("http://") or cs.startswith("socks")):
+                return cs
+            ip, port = p.get("ip"), p.get("port")
+            if ip and port:
+                return f"http://{ip}:{port}"
+        return None
+    except Exception:
+        return None
 
 
 def normalize_youtube_url(url: str) -> str:
@@ -99,6 +125,26 @@ def download_youtube(
         path = get_downloaded_path(out_dir, out_basename)
         if path and Path(path).stat().st_size:
             return (True, None)
+        # Errore "non disponibile nel tuo paese": prova con un proxy italiano gratuito
+        geo_err = "not made this video available" in last_err.lower() or "not available in your country" in last_err.lower()
+        if geo_err and not proxy:
+            free_proxy = _fetch_free_proxy_it()
+            if free_proxy:
+                proxy_args_retry = ["--proxy", free_proxy]
+                for client in ("tv_simply", "android_vr"):
+                    for format_spec in format_specs:
+                        cmd = ytdlp + [
+                            "--no-warnings", "--no-playlist",
+                            "--extractor-args", f"youtube:player_client={client}",
+                            "-f", format_spec, "--merge-output-format", "mp4",
+                            "-o", out_tpl,
+                        ] + proxy_args_retry + [url]
+                        result = subprocess.run(cmd, capture_output=True, timeout=600, text=True, cwd=out_dir)
+                        if result.returncode == 0:
+                            path = get_downloaded_path(out_dir, out_basename)
+                            if path and Path(path).stat().st_size:
+                                return (True, None)
+                last_err = (result.stderr or result.stdout or "").strip() if result else last_err
         return (False, last_err[:500] if last_err else "YouTube ha bloccato la richiesta. Riprova più tardi.")
     except subprocess.TimeoutExpired:
         return (False, "Timeout: video troppo lungo o connessione lenta.")
