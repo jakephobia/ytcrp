@@ -128,11 +128,13 @@ def _zoom_filter(zoom_pct: float) -> str:
 
 
 def crop_to_portrait(input_path: str, output_path: str, zoom_pct: float = 7) -> bool:
-    crop_filter = _zoom_filter(zoom_pct)
+    # Scala a max 720p per ridurre dimensione file e upload più veloce (evita NetworkError)
+    crop_filter = _zoom_filter(zoom_pct) + ",scale=-2:720"
     # -threads 2 riduce uso RAM/CPU su hosting con risorse limitate (es. Railway)
     cmd = [
         "ffmpeg", "-y", "-threads", "2", "-i", input_path,
         "-vf", crop_filter, "-an", "-movflags", "+faststart",
+        "-crf", "28",
         output_path,
     ]
     try:
