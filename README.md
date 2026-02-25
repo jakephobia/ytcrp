@@ -70,6 +70,8 @@ Guida passo passo in **[ORACLE-CLOUD.md](ORACLE-CLOUD.md)**. In sintesi: crei un
 
 **Comandi:** `/start` — istruzioni | `/download <link> [0-30]` — download diretto.
 
+**Video "non disponibile nel tuo paese":** Su Railway/Fly.io il download usa l’IP del server (es. USA). Per video solo in Italia: imposta la variabile **`YT_PROXY`** con un proxy a uscita italiana (vedi ALTERNATIVE-HOSTING.md), oppure usa il bot in **locale** (da casa tua l’IP è italiano).
+
 ---
 
 ## Web (Flask)

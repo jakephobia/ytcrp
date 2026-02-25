@@ -65,6 +65,8 @@ def download_youtube(
             "best",
         ]
         last_err = ""
+        proxy = (os.environ.get("YT_PROXY") or os.environ.get("TELEGRAM_YT_PROXY") or "").strip()
+        proxy_args = ["--proxy", proxy] if proxy else []
         for client in ("tv_simply", "android_vr"):
             for format_spec in format_specs:
                 cmd = ytdlp + [
@@ -74,8 +76,7 @@ def download_youtube(
                     "-f", format_spec,
                     "--merge-output-format", "mp4",
                     "-o", out_tpl,
-                    url,
-                ]
+                ] + proxy_args + [url]
                 result = subprocess.run(
                     cmd,
                     capture_output=True,
