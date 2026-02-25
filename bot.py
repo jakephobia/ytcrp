@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MessageEntity
+from telegram.request import HTTPXRequest
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -237,29 +238,38 @@ async def callback_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
     size = os.path.getsize(portrait_path)
     logger.info("Ritaglio completato, invio file %.1f MB", size / (1024 * 1024))
-    try:
-        if size <= TELEGRAM_VIDEO_MAX_BYTES:
-            with open(portrait_path, "rb") as f:
-                await context.bot.send_video(
-                    chat_id=chat_id,
-                    video=f,
-                    filename="video_portrait.mp4",
-                    caption="Portrait 9:16",
-                )
-        else:
-            with open(portrait_path, "rb") as f:
-                await context.bot.send_document(
-                    chat_id=chat_id,
-                    document=f,
-                    filename="video_portrait.mp4",
-                    caption="Video >50MB inviato come documento.",
-                )
-        logger.info("Video inviato con successo")
-    except Exception as e:
+    last_error = None
+    for attempt in range(2):
+        try:
+            if size <= TELEGRAM_VIDEO_MAX_BYTES:
+                with open(portrait_path, "rb") as f:
+                    await context.bot.send_video(
+                        chat_id=chat_id,
+                        video=f,
+                        filename="video_portrait.mp4",
+                        caption="Portrait 9:16",
+                    )
+            else:
+                with open(portrait_path, "rb") as f:
+                    await context.bot.send_document(
+                        chat_id=chat_id,
+                        document=f,
+                        filename="video_portrait.mp4",
+                        caption="Video >50MB inviato come documento.",
+                    )
+            logger.info("Video inviato con successo")
+            last_error = None
+            break
+        except Exception as e:
+            last_error = e
+            logger.warning("Tentativo invio %s fallito: %s", attempt + 1, e)
+            if attempt == 0:
+                await asyncio.sleep(2)
+    if last_error is not None:
         logger.exception("Errore invio video a Telegram")
         await context.bot.send_message(
             chat_id,
-            f"❌ Errore durante l'invio del file. Riprova. ({type(e).__name__})",
+            f"❌ Errore durante l'invio del file. Riprova. ({type(last_error).__name__})",
         )
     try:
         await query.message.delete()
@@ -363,7 +373,14 @@ def main() -> None:
     if not token:
         logger.error("Imposta TELEGRAM_BOT_TOKEN (variabile d'ambiente o file token.txt nella cartella del bot).")
         return
-    app = Application.builder().token(token).build()
+    # Timeout lunghi per upload video (default media_write_timeout=20s causa NetworkError)
+    request = HTTPXRequest(
+        read_timeout=60,
+        write_timeout=60,
+        connect_timeout=30,
+        media_write_timeout=600,
+    )
+    app = Application.builder().token(token).request(request).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("download", handle_download_command))
     app.add_handler(CallbackQueryHandler(callback_zoom, pattern="^zoom_"))
